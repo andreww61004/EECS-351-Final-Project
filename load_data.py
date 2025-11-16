@@ -48,5 +48,7 @@ def ecg_annotations(record_name):
         
         print(f"\nSuccessfully loaded annotations for record: {record_name}")
 
+        return annotation
+
     except Exception as e:
         print(f"Could not load annotations for record {record_name}. Error: {e}")
