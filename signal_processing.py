@@ -4,38 +4,38 @@ import numpy as np
 from scipy.signal import hilbert
 import load_data
 
-# the wavelet transform is used to filter the signal.
-# the transform breaks the signal into time-frequency
+# The wavelet transform is used to filter the signal.
+# The transform breaks the signal into time-frequency
 # scales (approximation and detail coefficients) which
-# then be zeroed to effectively filter the signal
-def wavelet_transform(signal, level):
+# can then be scaled to effectively filter the signal
+
+def dwavelet_transform(signal, level):
     # specify the wavelet type and decomposition level for the transform
     wavelet = pywt.Wavelet('sym5')
 
     # perform the stationary wavelet transform
-    coeffs = pywt.swt(signal[:,0], wavelet, level)
+    coeffs = pywt.wavedec(signal[:,0], wavelet, level)
 
     # zero the scales we want to filter (cD2, cD1)
-    for i in range(0, level - 1):
-        coeffs[i][1][:] = 0
+    #coeffs[0] = np.zeros_like(coeffs[0])
+    for i in range(1, level - 1):
+        coeffs[i] = np.zeros_like(coeffs[i])
 
     # reconstruct the signal using the inverse wavelet transform
-    return pywt.iswt(coeffs, wavelet)
+    return pywt.waverec(coeffs, wavelet)
 
 
-# this function estimates the derivative of the signal
-# and returns the differentiated signal
+# Estimates the derivative of the values in a signal
 def differentiate(signal, Ts):
     return np.gradient(signal, Ts)
 
 
-# this function applies a squaring operation
-# to the signal values
+# Squares the signal values
 def square(signal):
     return np.square(signal)
 
 
-# this is an n (window_size) point moving average filter
+# N point (window_size) moving average filter
 def average(signal, window_size):
     weights = np.ones(window_size) / window_size
     ecg_envelope = np.convolve(signal, weights, mode='valid')

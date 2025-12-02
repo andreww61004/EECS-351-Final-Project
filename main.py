@@ -1,86 +1,77 @@
 import load_data
 import signal_processing
+import peak_detection
 import help
 import numpy as np
 import matplotlib.pyplot as plt
 
 def main():
-    # the name of the record to retrieve
-    record_name = '121'
+    # Record to retrieve (try '200' or '203' for arrythmia examples)
+    record_name = '203'
 
     annotations = load_data.ecg_annotations(record_name)
-
-    # the level of decomposition in the wavelet transform
-    level = 3
-
-    # obtain details of the record
+    
     ecg = load_data.ecg_signal(record_name)
     record = load_data.record_info(record_name)
+    fs = record[2] # Retrieving sampling frequency
 
-    # use the wavelet transform to filter the ecg data
-    filtered_ecg = signal_processing.wavelet_transform(ecg, level)
+    # Filtering
+    level = 3
+    filtered_ecg = signal_processing.dwavelet_transform(ecg, level)
 
-    # obtain first order differential signal of filtered ecg
-    differentiated_ecg = signal_processing.differentiate(filtered_ecg, 1/record[2])
+    # Derivative
+    differentiated_ecg = signal_processing.differentiate(filtered_ecg, 1/fs)
 
-    # obtain squared, first order filtered ecg
+    # Squaring
     squared_ecg = signal_processing.square(differentiated_ecg)
 
-    # obtain the envelope of squared, first order filtered ecg
-    ecg_average5 = signal_processing.average(squared_ecg, 5)
-    ecg_average15 = signal_processing.average(squared_ecg, 15)
+    # Moving average (integration)
+    window_size = int(0.05 * fs) 
+    integrated_ecg = signal_processing.average(squared_ecg, window_size)
 
+    # Adaptive threshold peak detection
+    detector = peak_detection.adaptive_threshold_algorithm(fs)
+    detected_peaks_indices = detector.solve(integrated_ecg)
 
+    #Plots for testing
+    plot_results = True
+    low_lim = 108000
+    upp_lim = 110000
 
-
-
-    # - plots for testing -
-    plot_filt_progression = False
-    plot_filt_ecg = True
-    plot_wavelets = False
-    plot_filt_on_original = False
-    low_lim = 361880
-    upp_lim = 365880
-    # ---------------------
-
-    if plot_filt_ecg:
-        fig, axes = plt.subplots(3,1)
+    if plot_results:
+        fig, axes = plt.subplots(3, 1, sharex=True, figsize=(10, 8))
         
-        axes[0].plot(ecg[low_lim:upp_lim,0])
-        axes[0].set_title(f"ECG Recording")
-        axes[0].set_ylabel(f"Amplitude")
+        # Plot 1: Original ECG
+        axes[0].plot(ecg[:,0], label='Original ECG', alpha=0.7)
+        axes[0].set_title(f"Original ECG (Record {record_name})")
+        axes[0].set_ylabel("Amplitude")
+        axes[0].set_xlim([low_lim, upp_lim])
+        
+        # Plot 2: Integrated Signal
+        axes[1].plot(integrated_ecg, color='orange', label='Integrated Signal')
+        axes[1].set_title(f"Processed Signal (Integration Window: {int(window_size/fs*1000)}ms)")
+        axes[1].set_ylabel("Amplitude")
 
-        #axes[1].plot(filtered_ecg[low_lim:upp_lim])
-        #axes[2].plot(differentiated_ecg[low_lim:upp_lim])
-        #axes[3].plot(squared_ecg[low_lim:upp_lim])
+        # Plot 3: Detected Peaks
+        axes[2].plot(integrated_ecg, color='green', alpha=0.5)
+        
+        view_peaks = detected_peaks_indices[
+            (detected_peaks_indices >= low_lim) & 
+            (detected_peaks_indices <= upp_lim)
+        ]
+        
+        axes[2].plot(view_peaks, integrated_ecg[view_peaks], 'rx', markersize=10, markeredgewidth=2, label='Detected R-Peaks')
+        axes[2].set_title("Adaptive Threshold Detection Results")
+        axes[2].set_ylabel("Amplitude")
+        axes[2].set_xlabel("Samples")
+        axes[2].legend()
 
-        axes[1].plot(ecg_average5[low_lim:upp_lim])
-        axes[1].set_title(f"Processed ECG + 5 Point Moving Average")
-        axes[1].set_ylabel(f"Amplitude")
+        print(f"\n--- Detection Stats in window [{low_lim}, {upp_lim}] ---")
+        annot_in_window = [x for x in annotations.sample if low_lim <= x <= upp_lim]
+        print(f"Annotated Peaks (Truth): {len(annot_in_window)}")
+        print(f"Detected Peaks (Algo):  {len(view_peaks)}")
 
-        axes[2].plot(ecg_average15[low_lim:upp_lim])
-        axes[2].set_title(f"Processed ECG + 15 Point Moving Average")
-        axes[2].set_ylabel(f"Amplitude")
-        axes[2].set_xlabel(f"Samples : [{low_lim},{upp_lim}]")
-
-        for i in range(0,len(annotations.symbol)):
-            if annotations.sample[i] < low_lim:
-                continue
-            elif annotations.sample[i] >= low_lim and annotations.sample[i] <= upp_lim:
-                print(f"{annotations.symbol[i]} at sample {annotations.sample[i]}")
-            else:
-                break
-
-        plt.show()
-
-    if plot_wavelets:
-        help.plot_wavelet_scales(ecg,low_lim,upp_lim, level)
-        plt.show()
-
-    if plot_filt_on_original:
-        plt.plot(filtered_ecg[low_lim:upp_lim])
-        plt.plot(squared_ecg[low_lim:upp_lim])
-        plt.plot(ecg_average5[low_lim:upp_lim])
+        plt.tight_layout()
         plt.show()
 
     return 0
