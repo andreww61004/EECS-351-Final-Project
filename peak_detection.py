@@ -1,7 +1,6 @@
 import numpy as np
 
 class adaptive_threshold_algorithm:
-    
     # Initializing all values for the adaptive thresholding algorithm
     def __init__(self, fs):
         # Initalizing the sampling frequency
@@ -15,17 +14,18 @@ class adaptive_threshold_algorithm:
         # larger peak to ensure the correct R-peak was found
         self.QRS_WINDOW = int(0.20 * fs)          
         
-        # T-Wave Window: 360ms. Window to discriminate T-waves from PVCs.
+        # T-Wave Window = 360ms
+        # Window to discriminate T-waves from PVCs.
         self.T_WAVE_WINDOW = int(0.36 * fs)       
         
         # Searchback triggers if no beat found for 1.66x average RR
         self.SEARCHBACK_LIMIT_FACTOR = 1.66
         
         # Initializing the thresholds and the states
-        self.SPKI = 0.0  # Running signal peak estimate
-        self.NPKI = 0.0  # Running noise peak estimate
-        self.threshold_i1 = 0.0 # Primary threshold
-        self.threshold_i2 = 0.0 # Secondary (lower) threshold
+        self.SPKI = 0.0  # running signal peak estimate
+        self.NPKI = 0.0  # running noise peak estimate
+        self.threshold_i1 = 0.0 # primary threshold
+        self.threshold_i2 = 0.0 # secondary (lower) threshold
         self.last_qrs_val = 0.0 
 
         self.rr_intervals = [] 
@@ -69,7 +69,7 @@ class adaptive_threshold_algorithm:
                     # Continue to next iteration to keep checking this window
                     continue 
                 else:
-                    # Now we assume it is the R-peak and run final checks (T-wave/Refractory)
+                    # Now we assume it is the R-peak and run final checks
                     registered_idx = self.finalize_peak(potential_peak_idx, potential_peak_val, last_qrs_index)
                     
                     if registered_idx is not None:
@@ -79,12 +79,12 @@ class adaptive_threshold_algorithm:
                     potential_peak_idx = None
                     potential_peak_val = -np.inf
 
-            # Evaluate Current Peak as New Candidate
+            # Evaluate current peak as new candidate
             # Refractory check (relative to the last confirmed QRS)
             if peak_idx - last_qrs_index < self.REFRACTORY_PERIOD:
                 continue
 
-            # Threshold Check
+            # Threshold check
             if peak_val >= self.threshold_i1:
                 # Instead of saving new candidate immediately, start the look-ahead window.
                 potential_peak_idx = peak_idx
@@ -106,12 +106,14 @@ class adaptive_threshold_algorithm:
                         # If searchback found a beat, clear any potential peaks
                         potential_peak_idx = None 
 
-        # Final cleanup: If a peak was pending at the very end of the signal
+        # Final cleanup if a peak was pending at the very end of the signal
         if potential_peak_idx is not None:
              self.finalize_peak(potential_peak_idx, potential_peak_val, last_qrs_index)
 
         return np.array(self.peaks_indices)
 
+    # finalize_peak takes the peak indices and validates them
+    # against possible PVC like patterns
     def finalize_peak(self, idx, val, last_qrs_idx):
         dt = idx - last_qrs_idx
         
@@ -162,6 +164,8 @@ class adaptive_threshold_algorithm:
                 if len(self.rr_intervals) > 8:
                     self.rr_intervals.pop(0)
 
+    # perform_searchback searches the past samples for possible R-peaks
+    # if the algorithm goes too long without breaking the threshold
     def perform_searchback(self, signal, start_idx, end_idx):
         search_start = start_idx + self.REFRACTORY_PERIOD
         search_end = end_idx

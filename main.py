@@ -2,38 +2,94 @@ import load_data
 import signal_processing
 import peak_detection
 import help
+import analysis
 import numpy as np
 import matplotlib.pyplot as plt
 
 def main():
-    # Record to retrieve (try '200' or '203' for arrythmia examples)
-    record_name = '203'
+    # Load the record data
 
+    # Record to retrieve (try '200' or '203' for arrythmia examples)
+    record_name = '105'
+
+    # Load the annotations for error analysis
     annotations = load_data.ecg_annotations(record_name)
-    
+
     ecg = load_data.ecg_signal(record_name)
     record = load_data.record_info(record_name)
-    fs = record[2] # Retrieving sampling frequency
+    fs = record[2] # retrieving sampling frequency
+
+
+
+    # Process the signal
+
+    # Instance the signal processing tools
+    level = 3
+    window_size = int(0.05 * fs)
+    processor = signal_processing.signal_processing_tools(fs, level, window_size)
 
     # Filtering
-    level = 3
-    filtered_ecg = signal_processing.dwavelet_transform(ecg, level)
+    filtered_ecg = processor.dwavelet_transform(ecg)
 
     # Differentiate
-    differentiated_ecg = signal_processing.differentiate(filtered_ecg, 1/fs)
+    differentiated_ecg = processor.differentiate(filtered_ecg)
 
     # Squaring
-    squared_ecg = signal_processing.square(differentiated_ecg)
+    squared_ecg = processor.square(differentiated_ecg)
 
     # Moving average (integration )
-    window_size = int(0.05 * fs) 
-    integrated_ecg = signal_processing.average(squared_ecg, window_size)
+    integrated_ecg = processor.average(squared_ecg)
 
-    # Adaptive threshold peak detection
+
+
+    # Detect the R-peaks
+
+    # R-peak detection uses a modified adaptive thresholding algorithm
     detector = peak_detection.adaptive_threshold_algorithm(fs)
     detected_peaks_indices = detector.solve(integrated_ecg)
 
-    # Limits of window
+
+
+    # Calculate the statistics of the record
+
+    print(f"\n--- Analysis Results for Record {record_name} ---")
+    
+    # RR interval and arrhythmia analysis
+    rr_stats = analysis.calculate_rr_statistics(detected_peaks_indices, fs)
+    diagnosis, ectopic_count = analysis.detect_arrhythmia(rr_stats)
+    
+    print(f"Mean Heart Rate: {rr_stats['mean_bpm']:.2f} BPM")
+    print(f"SDNN (Variability): {rr_stats['sdnn']:.4f} s")
+    print(f"Automated Diagnosis: {diagnosis}")
+    print(f"Irregular Beats Detected: {ectopic_count}")
+
+    # Error stats
+    # We use annotations.sample for the true peak indices. We filter out
+    # non-beat annotations and compare to our detected R-peaks
+    valid_beat_symbols = set(['N', 'L', 'R', 'B', 'A', 'a', 'J', 'S', 'V', 
+                              'r', 'F', 'e', 'j', 'n', 'E', '/', 'f', 'Q', '?'])
+
+    true_peaks = [
+        samp for samp, symb in zip(annotations.sample, annotations.symbol) 
+        if symb in valid_beat_symbols
+    ]
+    true_peaks = np.array(true_peaks)
+    
+    perf_metrics = analysis.calculate_error_metrics(detected_peaks_indices, true_peaks, fs)
+    
+    print(f"\n--- Performance Metrics ---")
+    print(f"True Positives (TP): {perf_metrics['TP']}")
+    print(f"False Positives (FP): {perf_metrics['FP']}")
+    print(f"False Negatives (FN): {perf_metrics['FN']}")
+    print(f"Sensitivity: {perf_metrics['Sensitivity']:.2%}")
+    print(f"Positive Predictive Value: {perf_metrics['PPV']:.2%}")
+    print(f"Average Error Distance (MAE): {perf_metrics['MAE_ms']:.2f} ms")
+
+
+
+    # Generate the plots for this record in the window
+
+    # Windows limits for graphs
     plot_results = True
     low_lim = 108000
     upp_lim = 110000
@@ -68,9 +124,9 @@ def main():
         axes[2].legend()
 
         print(f"\n--- Detection Stats in window [{low_lim}, {upp_lim}] ---")
-        annot_in_window = [x for x in annotations.sample if low_lim <= x <= upp_lim]
-        print(f"Annotated Peaks (Truth): {len(annot_in_window)}")
-        print(f"Detected Peaks (Algo):  {len(view_peaks)}")
+        annot_in_window = [x for x in true_peaks if low_lim <= x <= upp_lim]
+        print(f"Annotated Peaks (True Peaks): {len(annot_in_window)}")
+        print(f"Detected Peaks (Algorithm):  {len(view_peaks)}")
 
         # Plot the wavelet scales
         help.plot_wavelet_scales(ecg, low_lim, upp_lim, level)
