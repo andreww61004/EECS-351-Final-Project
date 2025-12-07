@@ -16,7 +16,7 @@ class signal_processing_tools:
     # filter the signal
     def dwavelet_transform(self, signal):
         # specify the wavelet type and decomposition level for the transform
-        wavelet = pywt.Wavelet('sym5')
+        wavelet = pywt.Wavelet('sym4')
 
         # perform the stationary wavelet transform
         coeffs = pywt.wavedec(signal[:,0], wavelet, self.level)

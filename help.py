@@ -8,7 +8,7 @@ def plot_wavelet_scales(ecg_signal, low_limit, upp_limit, level):
     ecg_signal[low_limit:upp_limit, 0] = ecg_signal[low_limit:upp_limit, 0] - np.mean(ecg_signal[low_limit:upp_limit, 0])
 
     # Basis function
-    wavelet = pywt.Wavelet('sym5')
+    wavelet = pywt.Wavelet('sym4')
     
     # Obtain the wavelet scale coefficients
     coeffs = pywt.wavedec(ecg_signal[low_limit:upp_limit, 0], wavelet, level=level, mode='periodization')

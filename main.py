@@ -10,7 +10,7 @@ def main():
     # Load the record data
 
     # Record to retrieve (try '200' or '203' for arrythmia examples)
-    record_name = '105'
+    record_name = '203'
 
     # Load the annotations for error analysis
     annotations = load_data.ecg_annotations(record_name)
