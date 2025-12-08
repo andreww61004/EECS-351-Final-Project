@@ -1,4 +1,4 @@
-Website: 
+Website: https://sites.google.com/umich.edu/eecs351-group18/home?authuser=0
 
 The data is pulled from the database using an api, so please ensure proper internet connection
 before running the program
