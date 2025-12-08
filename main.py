@@ -11,6 +11,9 @@ def main():
 
     # Record to retrieve (try '200' or '203' for arrythmia examples)
     record_name = '203'
+    # Viewing window limits
+    low_lim = 108000   # valid values between 0 and 650,000
+    upp_lim = 110000   #
 
     # Load the annotations for error analysis
     annotations = load_data.ecg_annotations(record_name)
@@ -18,8 +21,6 @@ def main():
     ecg = load_data.ecg_signal(record_name)
     record = load_data.record_info(record_name)
     fs = record[2] # retrieving sampling frequency
-
-
 
     # Process the signal
 
@@ -91,8 +92,6 @@ def main():
 
     # Windows limits for graphs
     plot_results = True
-    low_lim = 108000
-    upp_lim = 110000
 
     # Plot the detected peaks and signal
     if plot_results:
