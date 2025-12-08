@@ -10,10 +10,10 @@ def main():
     # Load the record data
 
     # Record to retrieve (try '200' or '203' for arrythmia examples)
-    record_name = '203'
+    record_name = '207'
     # Viewing window limits
-    low_lim = 108000   # valid values between 0 and 650,000
-    upp_lim = 110000   #
+    low_lim = 0   # valid values between 0 and 650,000
+    upp_lim = 1000   #
 
     # Load the annotations for error analysis
     annotations = load_data.ecg_annotations(record_name)

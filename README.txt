@@ -1,5 +1,8 @@
 Website: 
 
+The data is pulled from the database using an api, so please ensure proper internet connection
+before running the program
+
 ----- Guide To Use The Algorithm -----
 1. First you must select a record from the MIT-BIH Database. The program is not user friendly,
    so you have to manually change the record you access by changing record_name on line 13 in
